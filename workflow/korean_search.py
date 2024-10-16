@@ -1,6 +1,6 @@
 """
 Naver Search Workflow for Alfred 5
-Copyright (c) 2021 Inchan Song
+Copyright (c) 2024 Inchan Song
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
