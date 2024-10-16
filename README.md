@@ -32,6 +32,7 @@ Install workflow
 General Usage
 --------------
 * `k ...`  : Naver Search(일반 네이버 검색)  
+* **Cmd + Y : 검색결과를 미리 보기(웹브라우져 출력)
 
 트리거가 되는 키워드`k`는 Alfred-workflow-AlfKoreanSearch 에서 개인에 맞게 직접 수정할 수 있습니다. 
 
