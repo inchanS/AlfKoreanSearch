@@ -89,7 +89,7 @@
 				<key>subtext</key>
 				<string></string>
 				<key>title</key>
-				<string>Search Naver for {query}</string>
+				<string>우리말샘에서 어휘 검색... {query}</string>
 				<key>type</key>
 				<integer>0</integer>
 				<key>withspace</key>
