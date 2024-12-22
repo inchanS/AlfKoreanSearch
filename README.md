@@ -5,7 +5,10 @@ Korean Search Workflow for Alfred
 ---------------------------------
 
 Alfred에서 국립국어원 [우리말샘 웹사이트](https://opendict.korean.go.kr) 검색어 자동완성 워크플로우
-<br>  
+<br>
+
+> 이 프로젝트는 [@Kuniz](https://github.com/Kuniz)님의 [alfnaversearch 워크플로우](https://github.com/Kuniz/alfnaversearch)를 기반으로 구현하였습니다.
+
 <br>  
 
 Preview
