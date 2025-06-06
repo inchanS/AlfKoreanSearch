@@ -1,5 +1,9 @@
-AlfKoreanSearch : Korean Search Workflow for Alfred ![Test](../../actions/workflows/test-korean-ac.yml/badge.svg) ![Release](../../actions/workflows/release.yml/badge.svg)
-==============
+# AlfKoreanSearch : Korean Search Workflow for Alfred 
+![Test](../../actions/workflows/test-korean-ac.yml/badge.svg) ![Release](../../actions/workflows/release.yml/badge.svg)  
+![GitHub stars](https://img.shields.io/github/stars/inchans/alfkoreansearch?style=flat&logo=apachespark)
+![GitHub all releases](https://img.shields.io/github/downloads/inchanS/alfkoreansearch/total?logo=github) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/inchanS/alfkoreansearch?logo=rocket)  ![GitHub](https://img.shields.io/github/license/inchanS/alfkoreansearch)
+
+
 
 Korean Search Workflow for Alfred
 ---------------------------------
