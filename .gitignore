@@ -1,0 +1,16 @@
+# Packaged workflow
+*.alfredworkflow
+
+# Go build artifacts (the universal binary is produced by build.sh / CI)
+/dist/
+/workflow/koreansearch
+
+# Alfred / macOS
+workflow/prefs.plist
+workflow/error.log
+.DS_Store
+workflow/.DS_Store
+
+# IDE
+.idea
+.claude
