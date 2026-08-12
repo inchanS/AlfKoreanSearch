@@ -71,3 +71,59 @@ func TestCachedUsesLoaderOnce(t *testing.T) {
 		t.Fatalf("nil loader miss = %q err=%v", data, err)
 	}
 }
+
+func TestCachedPrunesStaleSiblings(t *testing.T) {
+	t.Setenv("alfred_workflow_cache", t.TempDir())
+
+	load := func(v string) func() ([]byte, error) {
+		return func() ([]byte, error) { return []byte(v), nil }
+	}
+
+	// Two distinct search words populate two per-word files.
+	oldKey := Key("opendict", "old")
+	if _, err := Cached(oldKey, time.Hour, load("a")); err != nil {
+		t.Fatal(err)
+	}
+	// Age the first entry beyond the freshness window.
+	past := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(path(oldKey), past, past); err != nil {
+		t.Fatal(err)
+	}
+
+	// A different word must not be able to serve the stale entry from a hit
+	// (different key), and writing it must evict the stale sibling.
+	newKey := Key("opendict", "new")
+	if _, err := Cached(newKey, time.Hour, load("b")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(path(oldKey)); !os.IsNotExist(err) {
+		t.Fatalf("stale sibling should have been pruned, stat err=%v", err)
+	}
+	if _, err := os.Stat(path(newKey)); err != nil {
+		t.Fatalf("fresh entry should remain: %v", err)
+	}
+}
+
+func TestCachedPruneSkipsOtherPrefixes(t *testing.T) {
+	t.Setenv("alfred_workflow_cache", t.TempDir())
+
+	// A stale entry under a different prefix must survive pruning.
+	other := Key("suggest", "keep")
+	if err := Write(other, []byte("keep")); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(path(other), past, past); err != nil {
+		t.Fatal(err)
+	}
+
+	load := func() ([]byte, error) { return []byte("x"), nil }
+	if _, err := Cached(Key("opendict", "word"), time.Hour, load); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(path(other)); err != nil {
+		t.Fatalf("entry under a different prefix must not be pruned: %v", err)
+	}
+}

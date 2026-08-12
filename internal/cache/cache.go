@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -74,5 +75,37 @@ func Cached(key string, maxAge time.Duration, loader func() ([]byte, error)) ([]
 	if err := Write(key, data); err != nil {
 		return nil, err
 	}
+	// Search-style keys (prefix + md5(word)) create one file per distinct
+	// word, so the cache would grow without bound. After writing a fresh
+	// entry, evict same-prefix siblings that are already past maxAge — they
+	// can no longer produce a hit and only accumulate on disk. maxAge 0
+	// ("never expires") entries are left untouched.
+	if maxAge > 0 {
+		pruneStale(key, maxAge)
+	}
 	return data, nil
+}
+
+// pruneStale removes cache files sharing key's prefix whose mtime is older
+// than maxAge. The prefix is the part of key before its final '_' (see Key),
+// so pruning stays scoped to one logical cache and never removes unrelated
+// fixed-key entries. Errors are ignored: pruning is best-effort housekeeping.
+func pruneStale(key string, maxAge time.Duration) {
+	i := strings.LastIndex(key, "_")
+	if i <= 0 {
+		return
+	}
+	matches, err := filepath.Glob(filepath.Join(dir(), key[:i]+"_*.json"))
+	if err != nil {
+		return
+	}
+	for _, p := range matches {
+		fi, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if time.Since(fi.ModTime()) > maxAge {
+			_ = os.Remove(p)
+		}
+	}
 }
