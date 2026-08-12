@@ -72,6 +72,19 @@ func TestCachedUsesLoaderOnce(t *testing.T) {
 	}
 }
 
+// stalePruneMarker backdates the prune marker so the next Cached write is
+// allowed to run a sweep (pruning is otherwise throttled to once a day).
+func stalePruneMarker(t *testing.T) {
+	t.Helper()
+	if err := Write(pruneMarker, []byte("old")); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-2 * pruneInterval)
+	if err := os.Chtimes(path(pruneMarker), old, old); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCachedPrunesStaleSiblings(t *testing.T) {
 	t.Setenv("alfred_workflow_cache", t.TempDir())
 
@@ -89,6 +102,7 @@ func TestCachedPrunesStaleSiblings(t *testing.T) {
 	if err := os.Chtimes(path(oldKey), past, past); err != nil {
 		t.Fatal(err)
 	}
+	stalePruneMarker(t)
 
 	// A different word must not be able to serve the stale entry from a hit
 	// (different key), and writing it must evict the stale sibling.
@@ -117,6 +131,7 @@ func TestCachedPruneSkipsOtherPrefixes(t *testing.T) {
 	if err := os.Chtimes(path(other), past, past); err != nil {
 		t.Fatal(err)
 	}
+	stalePruneMarker(t)
 
 	load := func() ([]byte, error) { return []byte("x"), nil }
 	if _, err := Cached(Key("opendict", "word"), time.Hour, load); err != nil {
@@ -125,5 +140,45 @@ func TestCachedPruneSkipsOtherPrefixes(t *testing.T) {
 
 	if _, err := os.Stat(path(other)); err != nil {
 		t.Fatalf("entry under a different prefix must not be pruned: %v", err)
+	}
+}
+
+// TestCachedPruneThrottled verifies the sweep runs at most once per interval:
+// a stale sibling written after a recent sweep survives until the next window.
+func TestCachedPruneThrottled(t *testing.T) {
+	t.Setenv("alfred_workflow_cache", t.TempDir())
+
+	load := func() ([]byte, error) { return []byte("x"), nil }
+
+	// First write runs a sweep and stamps the marker fresh.
+	if _, err := Cached(Key("opendict", "first"), time.Hour, load); err != nil {
+		t.Fatal(err)
+	}
+
+	// A stale entry appears afterwards.
+	stale := Key("opendict", "stale")
+	if err := Write(stale, []byte("s")); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(path(stale), past, past); err != nil {
+		t.Fatal(err)
+	}
+
+	// A second write within the interval must NOT sweep, so it survives.
+	if _, err := Cached(Key("opendict", "second"), time.Hour, load); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path(stale)); err != nil {
+		t.Fatalf("throttled sweep should have left the stale entry: %v", err)
+	}
+
+	// Once the marker ages past the interval, the next write sweeps it away.
+	stalePruneMarker(t)
+	if _, err := Cached(Key("opendict", "third"), time.Hour, load); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path(stale)); !os.IsNotExist(err) {
+		t.Fatalf("post-interval sweep should have pruned the stale entry, err=%v", err)
 	}
 }

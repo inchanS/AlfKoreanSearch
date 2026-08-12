@@ -17,7 +17,7 @@ import (
 const (
 	autoCompleteURL = "https://opendict.korean.go.kr/search/autoComplete"
 	resultURL       = "https://opendict.korean.go.kr/search/searchResult?focus_name=query&query=%s"
-	searchCacheAge  = 30 * time.Second
+	searchCacheAge  = 24 * time.Hour
 )
 
 // suggestionsRE extracts the array literal from the response JavaScript:

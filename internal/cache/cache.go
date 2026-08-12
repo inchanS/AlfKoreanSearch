@@ -76,14 +76,33 @@ func Cached(key string, maxAge time.Duration, loader func() ([]byte, error)) ([]
 		return nil, err
 	}
 	// Search-style keys (prefix + md5(word)) create one file per distinct
-	// word, so the cache would grow without bound. After writing a fresh
-	// entry, evict same-prefix siblings that are already past maxAge — they
-	// can no longer produce a hit and only accumulate on disk. maxAge 0
-	// ("never expires") entries are left untouched.
+	// word, so the cache would grow without bound. Evict same-prefix siblings
+	// that are already past maxAge — they can no longer produce a hit and only
+	// accumulate on disk. maxAge 0 ("never expires") entries are left
+	// untouched, and the sweep itself runs at most once a day (see maybePrune)
+	// so it does not add a directory scan to every cache write.
 	if maxAge > 0 {
-		pruneStale(key, maxAge)
+		maybePrune(key, maxAge)
 	}
 	return data, nil
+}
+
+// pruneMarker is the fixed key whose mtime records when the last prune sweep
+// ran. Its name shares no search prefix, so pruneStale never matches it.
+const pruneMarker = "__prune_check"
+
+// pruneInterval throttles pruneStale: the sweep runs at most once per interval.
+const pruneInterval = 24 * time.Hour
+
+// maybePrune runs pruneStale at most once per pruneInterval, gated by the
+// mtime of a marker file, so eviction happens roughly daily rather than on
+// every cache write.
+func maybePrune(key string, maxAge time.Duration) {
+	if _, fresh := Read(pruneMarker, pruneInterval); fresh {
+		return
+	}
+	_ = Write(pruneMarker, []byte(time.Now().Format(time.RFC3339)))
+	pruneStale(key, maxAge)
 }
 
 // pruneStale removes cache files sharing key's prefix whose mtime is older
